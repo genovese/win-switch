@@ -48,22 +48,15 @@ To use the package, download ~win-switch.el~ and place it
 somewhere in your load path.[fn:2] Then, execute the following code
 either directly or from in your .emacs file:
 
-#+begin_src emacs-lisp
-    (require 'win-switch)
-#+end_src
-# split this for github
-#+begin_src emacs-lisp
-    (global-set-key "\C-xo" 'win-switch-dispatch)
-#+end_src
+:    (require 'win-switch)
+:    (global-set-key "\C-xo" 'win-switch-dispatch)
 
 or use whatever keybinding you ordinarily have set to =other-window=.
 Alternatively, you can use one of a variety of predefined configuration
 commands, as in
 
-#+begin_src emacs-lisp
-    (require 'win-switch)
-    (win-switch-setup-keys-ijkl "\C-xo")
-#+end_src
+:    (require 'win-switch)
+:    (win-switch-setup-keys-ijkl "\C-xo")
 
 which has the same effect as the above. In fact, the latter approach
 is preferred somewhat as it makes it easier to explore other configurations
