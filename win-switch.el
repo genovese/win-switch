@@ -713,7 +713,7 @@ keys with the same prefix."
                    (if (and (consp entry)
                             (keymapp (rest entry))
                             (null (lookup-key (rest entry) [t])))
-                       (cons (first entry) (fix-keymap-defaults (rest entry)))
+                       (cons (first entry) (win-switch-fix-keymap-defaults (rest entry)))
                      entry)) map)))
     (unless (lookup-key fixed-map [t])
       (define-key fixed-map [t] 'win-switch-exit-and-redo))

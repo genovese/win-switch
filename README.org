@@ -13,7 +13,7 @@ efficient interface than tabbed browsing or similar designs.
 It is not uncommon for people to keep up to 6 windows in a
 frame. But when you use multiple windows in this way, you
 may frequently find yourself moving among the windows using
-`other-window' (C-x o) again and again -- an unpleasantly
+=other-window= (~C-x o~) again and again -- an unpleasantly
 large number of keystrokes for so common a maneuver. And
 because the order of windows in the window list need not
 relate intuitively to windows' visual positions, moving more
