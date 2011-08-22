@@ -23,7 +23,7 @@ complex window configuration demands many keystrokes and/or
 nontrivial attention. This package is designed to solve that
 problem.
 
-While the `windmove' package provides functions for moving
+While the =windmove= package provides functions for moving
 intuitively among windows, the natural key bindings for these
 functions (e.g., the arrow keys with some modifier) require a
 distant and thus inefficient hand movement. Moreover, one often
@@ -302,11 +302,11 @@ The other customizable parameters control how win-switch
 mode gives feedback indicating whether window switching is
 engaged.
 
-  + `win-switch-provide-visual-feedback'
-  + `win-switch-feedback-background-color'
-  + `win-switch-feedback-foreground-color'
-  + `win-switch-on-feedback-function'
-  + `win-switch-off-feedback-function'
+  + =win-switch-provide-visual-feedback=
+  + =win-switch-feedback-background-color=
+  + =win-switch-feedback-foreground-color=
+  + =win-switch-on-feedback-function=
+  + =win-switch-off-feedback-function=
 
 The feedback mechanisms are intended to make it salient when
 window switching mode is on or off and can be customized at
@@ -321,9 +321,32 @@ when window switching turns off. Extra care should be taken
 to handle errors properly in the latter two, if they are
 used.
 
-  + `win-switch-load-hook'
-  + `win-switch-on-hook'
-  + `win-switch-off-hook'
+  + =win-switch-load-hook=
+  + =win-switch-on-hook=
+  + =win-switch-off-hook=
+
+* Testing and Bug Reports
+
+The associated package =ws-test.el= in the same repository
+contains a framework for automated testing of win-switch.
+Load the package and execute the comand =ws-test-run-all=
+within emacs, i.e. do =M-x ws-test-run-all=.
+(There are other ways to run tests in the framework but
+that is the simplest.)
+A report on the test results will then come up, typically
+in its own frame. If there are any failures, instructions
+for reporting tne tests will be given. Please copy
+the test report and provide as much information as you
+can about your platform, emacs setup, and ideally your
+emacs init file. New tests will be added over time.
+
+If when using ~win-switch~, you encounter any problems,
+anomalies, or curiosities, please report them to me at
+=genovese@cmu.edu=, along with information about your
+platform, emacs version, and emacs initialization. In
+addition, feel free to send me feature requests to the same
+address. In both cases, I would appreciate if you would
+include "win-switch" on the subject line.
 
 
 * Notes 
@@ -331,10 +354,10 @@ used.
 win-switch is not a formal major or minor mode, more of an
 overriding mode. This started as a way to explore dynamic
 keybindings, an idea that is generalized considerably in my
-packages `quick-nav' and `power-keys'. The latter introduces
+packages =quick-nav= and =power-keys=. The latter introduces
 some programming abstractions that can be used to easily
 install dynamic keymaps of several flavors. I plan to use
-the `power-keys' mechanisms for this package in a later
+the =power-keys.el= mechanisms for this package in a later
 version.
 
 
