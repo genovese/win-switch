@@ -50,6 +50,7 @@ either directly or from in your .emacs file:
 
 #+begin_src emacs-lisp
     (require 'win-switch)
+
     (global-set-key "\C-xo" 'win-switch-dispatch)
 #+end_src
 
@@ -59,6 +60,7 @@ commands, as in
 
 #+begin_src emacs-lisp
     (require 'win-switch)
+
     (win-switch-setup-keys-ijkl "\C-xo")
 #+end_src
 
