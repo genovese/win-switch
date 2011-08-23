@@ -41,7 +41,13 @@
 ;;  (Do we need tests for the tests now?) But as the examples show,
 ;;  it does provide what it is meant to: an extensible framework
 ;;  for testing win-switch mode under various configurations.
-;;  
+;;
+;;  Known Issues:
+;;
+;;  On Carbon Emacs 22, the Vertical Resizing 1 test can fail at random
+;;  when the main frame is small at start up. Enlarging the frame by
+;;  a couple lines fixes the problem. I'm looking into this.
+;; 
 ;;  Code Contents (by emacs pages)
 ;;    1. (@> "Utility Functions")
 ;;    2. (@> "Window and buffer setup and cleanup")
@@ -778,7 +784,8 @@ REGEX is a string containing a regular expression to match."
     ;; (either height or width or both) by the correct amount.
     (ws-test "Vertical Resizing 1" num-win win-spl save
       (let ((sizes (ws-test-window-sizes width-height))
-            (newsizes nil))
+            (newsizes nil)
+            (use-dialog-box nil))
         (ws-test-interactive-cmds "<C-down> <S-up> <S-up> <S-up> <RET>")
         (setq newsizes (ws-test-window-sizes width-height))
         (ws-test-should (and (= 3 (- (second (aref newsizes 1)) (second (aref sizes 1))))
@@ -816,8 +823,9 @@ REGEX is a string containing a regular expression to match."
   "Four windows, ijkl configuration, no other."
   :settings (other-window-first nil)
   (let ((num-win 4)
-        (win-spl '((v) (nil h) (nil nil (8 nil))))
-        (save    nil))
+        (win-spl '((v) (nil h) (nil nil (5 nil))))
+        (save    nil)
+        (use-dialog-box nil))
     (ws-test "Directional Keys 1" num-win win-spl save
       (ws-test-interactive-cmds "C-x o k l k j i u")
       (next-line)
@@ -825,6 +833,7 @@ REGEX is a string containing a regular expression to match."
     (ws-test "Directional Keys 2" num-win win-spl save
       (ws-test-interactive-cmds "C-x o k u")
       (goto-char (point-max))
+      (redisplay t) ; ATTN seems to allow windmove to calculate correctly
       (ws-test-interactive-cmds "C-x o l i i u")
       (next-line)
       (ws-test-should (looking-at "^Line 1")))
@@ -945,14 +954,12 @@ REGEX is a string containing a regular expression to match."
     (ws-test "Exit on Help" num-win win-spl save
       (kill-buffer (get-buffer-create "*Help*"))
       (let ((result nil)
+            (help-window-select 'other) ; Emacs 23+
             (C-h (key-description (vector help-char))))
         (ws-test-interactive-cmds
          (concat "C-x o o o o o o " C-h " l"))
-        (setq result (string-equal "*Help*" (buffer-name (current-buffer))))
-        (ws-test-interactive-cmds
-         (concat "C-x o i u"))
-        (ws-test-should (and result
-                             (looking-at "^Line 0")))))))
+        (ws-test-should (and (get-buffer "*Help*")
+                             (window-live-p (get-buffer-window "*Help*"))))))))
 
 
 (provide 'ws-tests)
