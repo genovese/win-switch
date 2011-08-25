@@ -14,7 +14,8 @@
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
 ;; Package-Requires: ((windmove))
-;; Compatibility: Tested with GNU Emacs 22, 23, 24 on Mac OS X 10.5
+;; Compatibility: GNU Emacs 22, GNU Emacs 23, Gnu Emacs 24.0.50
+;;                Tested on these versions on Mac OS X 10.5.
 ;;                Testing or feedback for other platforms/versions
 ;;                would be very much appreciated.
 

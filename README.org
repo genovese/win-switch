@@ -326,15 +326,17 @@ used.
 The associated package =ws-test.el= in the same repository
 contains a framework for automated testing of win-switch.
 Load the package and execute the comand =ws-test-run-all=
-within emacs, i.e. do =M-x ws-test-run-all=.
-(There are other ways to run tests in the framework but
-that is the simplest.)
-A report on the test results will then come up, typically
-in its own frame. If there are any failures, instructions
-for reporting tne tests will be given. Please copy
-the test report and provide as much information as you
-can about your platform, emacs setup, and ideally your
-emacs init file. New tests will be added over time.
+within emacs, i.e. do =M-x ws-test-run-all=. (There are
+other ways to run tests in the framework but that is the
+simplest.) It might be a good idea to manually increase the
+frame size above the small default initial size before
+running the tests. A report on the test results will then
+come up, typically in its own frame. If there are any
+failures, instructions for reporting tne tests will be
+given. Please copy the test report and provide as much
+information as you can about your platform, emacs setup, and
+ideally your emacs init file. New tests will be added over
+time.
 
 If when using ~win-switch~, you encounter any problems,
 anomalies, or curiosities, please report them to me at
