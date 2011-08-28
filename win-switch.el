@@ -1379,7 +1379,7 @@ that will be bound globally to `win-switch-dispatch'."
   ;; Perhaps even a little shorter...
   (setq win-switch-idle-time 0.7)
   ;; For two windows, we can always use C-u to force entry
-  (setq win-switch-window threshold 2)
+  (setq win-switch-window-threshold 2)
   ;; With more than 3 windows, doing an other-window first can be
   ;; confusing -- easier to just move where you want to go.
   ;; But with 3 or fewer windows, it's much more efficient.
