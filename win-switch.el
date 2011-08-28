@@ -7,9 +7,9 @@
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/
 
 ;; Version: 1.0
-;; Update#: 8
+;; Update#: 9
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Sun 20 Aug 2011 at 02:00 EDT
+;; Last-Updated: Sat 27 Aug 2011 at 23:52 EDT
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
@@ -201,6 +201,8 @@
 
 
 ;;; Change Log:
+;;
+;;  * 27 Aug 2011 -- Fixed missing hyphen in `win-switch-authors-configuration'
 ;;
 ;;  * 20 Aug 2011 -- Updated documentation, moved split and delete
 ;;                   keys after the others in the file and added function
