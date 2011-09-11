@@ -1333,7 +1333,7 @@ in the corresponding direction. The arguments DISPATCH-KEYS, if
 non-nil, should be a list of keys that will be bound globally to
 `win-switch-dispatch'."
   (interactive)
-  (apply 'win-switch-setup-keys-arrow (cons 'control dispatch-keys)))
+  (apply 'win-switch-setup-keys-arrows (cons 'control dispatch-keys)))
 
 ;;;###autoload
 (defun win-switch-setup-keys-arrow-meta (&rest dispatch-keys)
@@ -1346,7 +1346,7 @@ in the corresponding direction. The arguments DISPATCH-KEYS, if
 non-nil, should be a list of keys that will be bound globally to
 `win-switch-dispatch'."
   (interactive)
-  (apply 'win-switch-setup-keys-arrow (cons 'meta dispatch-keys)))
+  (apply 'win-switch-setup-keys-arrows (cons 'meta dispatch-keys)))
 
 ;;;###autoload
 (defun win-switch-setup-keys-esdf (&rest dispatch-keys)
