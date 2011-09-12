@@ -9,7 +9,7 @@
 ;; Version: 1.0
 ;; Update#: 10
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Sat 27 Aug 2011 at 23:52 EDT
+;; Last-Updated: Sun 11 Sep 2011 at 14:46 EDT
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
