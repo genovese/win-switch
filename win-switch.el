@@ -7,7 +7,7 @@
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/
 
 ;; Version: 1.0
-;; Update#: 9
+;; Update#: 10
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
 ;; Last-Updated: Sat 27 Aug 2011 at 23:52 EDT
 ;; By: Christopher R. Genovese
@@ -202,6 +202,9 @@
 
 ;;; Change Log:
 ;;
+;;  * 11 Sep 2011 -- Fixed typo in `win-switch-setup-keys-arrow-ctrl'
+;;                   and `win-switch-setup-keys-arrow-meta'
+;;                   
 ;;  * 27 Aug 2011 -- Fixed missing hyphen in `win-switch-authors-configuration'
 ;;
 ;;  * 20 Aug 2011 -- Updated documentation, moved split and delete
