@@ -483,11 +483,11 @@ used without penalty."
     (ws-test-pstring "FAILED" :foreground "red" :weight bold)))
 
 (defmacro ws-test-should (&rest forms)
-  "Execute FORMS and return string describing outcome."
+  "Execute FORMS and assert non-nil result."
   `(not (null (progn ,@forms))))
 
 (defmacro ws-test-should-error (&rest forms)
-  "Execute FORMS and return string describing outcome."
+  "Execute FORMS and assert error result."
   `(condition-case nil
         (progn ,@forms nil)
       (error t)))
@@ -961,6 +961,42 @@ REGEX is a string containing a regular expression to match."
         (ws-test-should (and (get-buffer "*Help*")
                              (window-live-p (get-buffer-window "*Help*"))))))))
 
+(def-ws-test-suite key-setting1
+  "Changing Key Bindings via the API."
+  (let ((num-win 4)
+        (win-spl '((vert) (horiz horiz)))
+        (save    nil)
+        (ws-save-map (copy-keymap win-switch-map))
+        (ws-key-status
+         (lambda ()
+           (mapcar (lambda (u)
+                     (cons (car u)
+                           (cons (cdr u)
+                                 (symbol-value (car u)))))
+                   win-switch-commands))))
+    (ws-test "Resetting predefined keylists" num-win win-spl save
+      (let ((cur-status (funcall ws-key-status))
+            (up-keys (copy-sequence win-switch-up-keys))
+            (next-keys (copy-sequence win-switch-next-window-keys))
+            (frame-keys (copy-sequence win-switch-other-frame-keys)))
+        (win-switch-set-keys next-keys 'up)
+        (win-switch-set-keys up-keys 'next-window)
+        (unless (lookup-key win-switch-map "&")
+          (win-switch-set-keys '("&") 'other-frame))
+        (win-switch-set-keys next-keys 'next-window)
+        (win-switch-set-keys up-keys 'up)
+        (win-switch-set-keys frame-keys 'other-frame)
+        (ws-test-should (equal cur-status
+                               (funcall ws-key-status)))))
+    (ws-test "Adding a key to predefined keylist" num-win win-spl save
+      (let ((cur-status (funcall ws-key-status))
+            (up-keys (copy-sequence win-switch-up-keys)))
+        (win-switch-add-key (first up-keys) 'other-frame)
+        (win-switch-add-key (first up-keys) 'up)
+        (ws-test-should (equal cur-status
+                               (funcall ws-key-status)))))
+    ;; ATTN more needed here
+    ))
 
 (provide 'ws-tests)
 

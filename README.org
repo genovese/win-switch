@@ -156,7 +156,7 @@ modifying the keys associated with particular commands.
        in
 
        #+begin_src emacs-lisp
-           (win-switch-setup-keys "\C-xo" "\C-x\C-o")
+           (win-switch-setup-keys-ijkl "\C-xo" "\C-x\C-o")
        #+end_src
 
     2. =win-switch-set-keys-arrow-ctrl=,
