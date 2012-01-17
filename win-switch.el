@@ -6,10 +6,10 @@
 ;; Maintainer: Christopher R. Genovese <genovese@cmu.edu>
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/win-switch/
 
-;; Version: 1.0.2
-;; Update#: 13
+;; Version: 1.0.3
+;; Update#: 14
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Tue 17 Jan 2012 at 15:53 EST
+;; Last-Updated: Tue 17 Jan 2012 at 15:58 EST
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
