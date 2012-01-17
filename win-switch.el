@@ -7,9 +7,9 @@
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/win-switch/
 
 ;; Version: 1.0.2
-;; Update#: 12
+;; Update#: 13
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Tue 17 Jan 2012 at 08:33 EST
+;; Last-Updated: Tue 17 Jan 2012 at 15:53 EST
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
@@ -1454,7 +1454,6 @@ should be a list of keys that will be bound globally to
 
 ;; Local Variables:
 ;; mode: emacs-lisp
-;; mode: linkd
 ;; End:
 
 ;;; win-switch.el ends here
