@@ -6,8 +6,8 @@
 ;; Maintainer: Christopher R. Genovese <genovese@cmu.edu>
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/win-switch/
 
-;; Version: 1.0.4
-;; Update#: 15
+;; Version: 1.0.5
+;; Update#: 16
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
 ;; Last-Updated: Sat 17 Mar 2012 at 14:49 EDT
 ;; By: Christopher R. Genovese
@@ -201,8 +201,8 @@
 
 ;;; Change Log:
 ;;
-;;  * 17 Mar 2012 -- Fixed silly typo in string constant in
-;;                   win-switch-setup-keys-arrows that was causing
+;;  * 17 Mar 2012 -- Fixed *two* silly typos in fset and in a string constant.
+;;                   in win-switch-setup-keys-arrows. The former was causing
 ;;                   load failure from package.el.
 ;;
 ;;  * 17 Jan 2012 -- Removed linkd minor mode nad Package-Requires header
@@ -1270,7 +1270,7 @@ during dispatch."
        (win-switch-dispatch arg))))
 
 ;;;###autoload
-(fset 'win-switch-dispatch-once win-switch-once-map)
+(fset 'win-switch-dispatch-once 'win-switch-once-map)
 (put  'win-switch-dispatch-once 'function-documentation
       "Prefix command to execute one window-switching operation.
 This command does not enter window-switching mode, nor does it
