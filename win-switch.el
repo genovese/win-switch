@@ -6,10 +6,10 @@
 ;; Maintainer: Christopher R. Genovese <genovese@cmu.edu>
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/win-switch/
 
-;; Version: 1.0.3
-;; Update#: 14
+;; Version: 1.0.4
+;; Update#: 15
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Tue 17 Jan 2012 at 15:58 EST
+;; Last-Updated: Sat 17 Mar 2012 at 14:49 EDT
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
@@ -200,6 +200,14 @@
 
 
 ;;; Change Log:
+;;
+;;  * 17 Mar 2012 -- Fixed silly typo in string constant in
+;;                   win-switch-setup-keys-arrows that was causing
+;;                   load failure from package.el.
+;;
+;;  * 17 Jan 2012 -- Removed linkd minor mode nad Package-Requires header
+;;                   because they were causing problems with loading
+;;                   the package through package.el.
 ;;
 ;;  * 18 Dec 2011 -- Fixed error in keylist management functions that
 ;;                   masked changes to keys on other lists. This
@@ -1343,7 +1351,7 @@ DISPATCH-KEYS, if non-nil, should be a list of keys that will be
 bound globally to `win-switch-dispatch'."
   (interactive "SModifier symbol: ")
   (when (eq modifier 'shift)
-    (error The "shift modifier cannot be used for dispatch"))
+    (error "The shift modifier cannot be used for dispatch"))
   (win-switch-set-keys '([up]) 'up)
   (win-switch-set-keys '([down]) 'down)
   (win-switch-set-keys '([left]) 'left)
