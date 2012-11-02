@@ -6,10 +6,10 @@
 ;; Maintainer: Christopher R. Genovese <genovese@cmu.edu>
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/win-switch/
 
-;; Version: 1.0.6
-;; Update#: 17
+;; Version: 1.0.7
+;; Update#: 18
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Sat 04 Aug 2012 at 14:58 EDT
+;; Last-Updated: Fri 02 Nov 2012 at 10:02 EDT
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
@@ -201,6 +201,10 @@
 
 ;;; Change Log:
 ;;
+;;  * 02 Nov 2012 -- Changed the last stray 'first to 'car
+;;
+;;  * 04 Aug 2012 -- Changed a few stray first/rest's to car/cdr's.
+;;  
 ;;  * 17 Mar 2012 -- Fixed *two* silly typos in fset and in a string constant.
 ;;                   in win-switch-setup-keys-arrows. The former was causing
 ;;                   load failure from package.el.
@@ -1007,7 +1011,7 @@ updates, additions, and deletions. KEY-LIST should be a list of
 keybindings. The predefined keylists are the customizable
 variables listed as the keys in `win-switch-commands'. No keymap
 changes are made by this function."
-  (let ((keyvars (mapcar 'first win-switch-commands)))
+  (let ((keyvars (mapcar 'car win-switch-commands)))
     (dolist (keyvar keyvars)
       (let ((keys (symbol-value keyvar)))
         (dolist (key key-list)
