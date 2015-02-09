@@ -131,33 +131,33 @@ horizontal or not. ATTN: clarify this."
     (aset windows index (selected-window))
     (setq index (1+ index))
     (while curlist
-      (let* ((splits (first curlist)) ; (size . horizontal?)
+      (let* ((splits (car curlist)) ; (size . horizontal?)
              (i 0)
              (split nil)
              (w nil)
              (numwins index))
         (while (and splits (< i numwins))
-          (setq split (first splits))
+          (setq split (car splits))
           (select-window (aref windows i))
           (when split
-            (let ((size (if (listp split) (first split) nil))
-                  (horz (if (listp split) (second split) (if (memq split '(h horiz horizontal)) t nil))))
+            (let ((size (if (listp split) (car split) nil))
+                  (horz (if (listp split) (cadr split) (if (memq split '(h horiz horizontal)) t nil))))
               (setq w (split-window (selected-window) size horz)))
             (select-window w)
             (switch-to-buffer (format ws-test-buffer-root index))
             (aset windows index w)
             (setq index (1+ index)))
-          (setq splits (rest splits))
+          (setq splits (cdr splits))
           (setq i (1+ i)))
-        (setq curlist (rest curlist))))
+        (setq curlist (cdr curlist))))
     (select-window (aref windows 0))))
   
 (defun ws-test-results-setup ()
   "Setup a buffer to summarize results."
   (let ((buf (get-buffer-create ws-test-results-buf))
         (mesg (concat
-               (ws-test-pstring "WinSwitch Test Results"
-                 :foreground "midnight blue" :weight bold :height 1.44)
+               (ws-test-pstring "Win-Switch Test Results"
+                 :foreground "blue" :weight bold :height 1.44)
                "\n    To dismiss, do M-x ws-test-dismiss or push button below.\n")))
     (with-current-buffer buf
       (when (= (point) (point-min))
@@ -197,7 +197,7 @@ horizontal or not. ATTN: clarify this."
   (when window-system
     (unless (and ws-test-results-frame (framep ws-test-results-frame))
       (setq ws-test-results-frame
-            (make-frame '((title . "WinSwitch Test Results")
+            (make-frame '((title . "Win-Switch Test Results")
                           (top . 1) (left . -1)
                           (width . 96) (height . 32)
                           (vertical-scroll-bars . right)
@@ -245,12 +245,13 @@ horizontal or not. ATTN: clarify this."
   "Display button that dismisses the results buffer/frame."
   (when ws-test-results-buf
     (with-current-buffer ws-test-results-buf
-      (insert-button
-       (if (facep 'custom-button)
-           (ws-test-pstring "Dismiss" 'custom-button)
-           "[Dismiss]")
-       'action (lambda (button) (ws-test-dismiss)))
-      (insert "\n"))))
+      (require 'cus-edit nil t) ;; defines custom-button if available
+      (let* ((have-cbutton-face (facep 'custom-button))
+             (label (if have-cbutton-face "Dismiss" "[Dismiss]"))
+             (bface (if have-cbutton-face 'custom-button 'button)))
+        (insert-button
+         label 'face bface 'action (lambda (button) (ws-test-dismiss)))
+       (insert "\n")))))
 
 (defun ws-test-window-sizes (&optional select-size)
   "Make vector of window sizes for all test buffers.
@@ -258,8 +259,8 @@ By default, sizes are lists as returned by `window-edges'.
 If provided, SELECT-SIZE should be a function that operates
 on such a list. For example, using
      (lambda (x) (and x
-                      (list (- (third x)  (first x))
-                            (- (fourth x) (second x)))))
+                      (list (- (third x)  (car x))
+                            (- (fourth x) (cadr x)))))
 give a vector of width, height pairs."
   (let ((size-f (if (functionp select-size) select-size #'identity))
         (wsizes (make-vector ws-test-num-windows nil))
@@ -318,7 +319,7 @@ any symbol as a function."
     (if function? `#',value `',value))
    ((atom value)
     value)
-   ((eq (first value) 'lambda)
+   ((eq (car value) 'lambda)
     `,value)
    (t
     `',value)))
@@ -353,7 +354,8 @@ any symbol as a function."
     (win-switch-set-keys '("\M-\C-g")    'emergency-exit)
     (win-switch-set-once-keys '("u")     'once-double-next)
     (win-switch-set-once-keys '("y")     'once-double-prev)
-    (global-set-key "\C-xo" 'win-switch-dispatch)))
+    (global-set-key "\C-xo" 'win-switch-dispatch)
+    (global-set-key "\C-x\C-o" 'win-switch-dispatch-once)))
 
 (defun ws-test-current-settings ()
   "Produce form specifying current win-switch settings."
@@ -385,7 +387,8 @@ any symbol as a function."
     (win-switch-set-keys ,(ws-test-safe-value win-switch-emergency-exit-keys)        'emergency-exit)
     (win-switch-set-once-keys ,(ws-test-safe-value win-switch-once-double-next-keys) 'once-double-next)
     (win-switch-set-once-keys ,(ws-test-safe-value win-switch-once-double-prev-keys) 'once-double-prev)
-    (global-set-key "\C-xo" ',(lookup-key (current-global-map) "\C-xo"))))
+    (global-set-key "\C-xo" ',(lookup-key (current-global-map) "\C-xo"))
+    (global-set-key "\C-x\C-o" ',(lookup-key (current-global-map) "\C-x\C-o"))))
 
 (defun ws-test-use-settings (settings)
   "Set win-switch parameters prior to the test.
@@ -395,16 +398,16 @@ If the former, the pair S V, is converted to (setq win-switch-S V).
 If the latter, the sexp is evaluated as is."
   (let ((items settings))
     (while items
-      (let ((item (first items))
-            (item2 (second items)))
+      (let ((item (car items))
+            (item2 (cadr items)))
         (cond
          ((symbolp item)
           (set (intern (concat "win-switch-" (symbol-name item)))
                item2)
-          (setq items (rest (rest items))))
+          (setq items (cdr (cdr items))))
          ((consp item)
           (eval item)
-          (setq items (rest items)))
+          (setq items (cdr items)))
          (t
           (error "Improperly formed ws-test-use-settings body (%s %s...)" item item2)))))
     nil))
@@ -419,8 +422,8 @@ If the latter, the sexp is evaluated as is."
   "Restore previously saved win-switch settings."
   (ws-test-use-settings
    (prog1
-       (first ws-test-saved-settings)
-     (setq ws-test-saved-settings (rest ws-test-saved-settings)))))
+       (car ws-test-saved-settings)
+     (setq ws-test-saved-settings (cdr ws-test-saved-settings)))))
   
 (defmacro with-win-switch-settings (settings &rest forms)
   "With win-switch SETTINGS as temporary context, execute body FORMS.
@@ -513,11 +516,11 @@ as desired."
        (cond
         ((null result)
          (ws-test-results-update ,name (ws-test-result-mesg nil)))
-        ((and (consp result) (eq (first result) 'error))
+        ((and (consp result) (eq (car result) 'error))
          (setq ws-test-unexpected-error-tests (1+ ws-test-unexpected-error-tests))
          (ws-test-results-update ,name
            (concat (ws-test-result-mesg nil)
-                   (format "  %s" (second result)))))
+                   (format "  %s" (cadr result)))))
         (t
          (setq ws-test-successful-tests (1+ ws-test-successful-tests))
          (ws-test-results-update ,name (ws-test-result-mesg result)))))
@@ -557,14 +560,14 @@ those given by `ws-test-default-settings'."
     ;; Look for :inherits NAME-SYM  or  :settings SETTINGS-LIST
     ;; Mo sense using more than one :inherits, but it does no harm
     (while (setq keyword
-                 (let ((fst (first body)))
+                 (let ((fst (car body)))
                    (and (keywordp fst)
                         (or (eq fst :inherits) (eq fst :settings)))))
       (if (eq keyword :inherits)
           (ws-test-suite-put-settings-x suite-symbol
-            (ws-test-get-settings (second body)))
+            (ws-test-get-settings (cadr body)))
         (ws-test-suite-add-settings-x suite-symbol
-          (second body)))                         
+          (cadr body)))                         
       (setq body (nthcdr 2 body)))
   `(defun ,suite-symbol (&optional suppress-results)
      ,(concat "Test suite for win-switch. "
@@ -595,7 +598,7 @@ those given by `ws-test-default-settings'."
   "Execute the tests in SUITE passing SUPPRESS.
 SUITE should be a symbol as given to `def-ws-test-suite'.
 An error is raised if test suite SUITE has not been defined."
-  (interactive "S")
+  (interactive "STest Suite: \n")
   (let ((the-suite
          (intern (concat "ws-test-suite-" (symbol-name suite)))))
     (unless (fboundp the-suite)
@@ -624,8 +627,8 @@ An error is raised if test suite SUITE has not been defined."
         ws-test-unexpected-error-tests 0)
   (let ((suites (reverse ws-test-defined-suites)))
     (while suites
-      (ws-test-run-suite (first suites) t)
-      (setq suites (rest suites)))
+      (ws-test-run-suite (car suites) t)
+      (setq suites (cdr suites)))
     (ws-test-done)
     (ws-test-display-tallies (length ws-test-defined-suites)
                              ws-test-total-tests
@@ -644,10 +647,10 @@ symbol argument."
   (let ((suites (reverse ws-test-defined-suites))
         (num-suites 0))
     (while suites
-      (when (funcall predicate (first suites))
-        (ws-test-run-suite (first suites) t)
+      (when (funcall predicate (car suites))
+        (ws-test-run-suite (car suites) t)
         (setq num-suites (1+ num-suites)))
-      (setq suites (rest suites)))
+      (setq suites (cdr suites)))
     (ws-test-done)
     (ws-test-display-tallies num-suites
                              ws-test-total-tests
@@ -706,10 +709,9 @@ REGEX is a string containing a regular expression to match."
         (win-spl '((vert) (horiz horiz)))
         (save    nil))
     (ws-test "Directional Keys 1" num-win win-spl save
-      (ws-test-should-error
-       (ws-test-interactive-cmds "C-x o i l k j u")
-       (next-line)
-       (looking-at "^Line 1")))
+      (ws-test-interactive-cmds "C-x o i l k j u")
+      (next-line)
+      (ws-test-should (looking-at "^Line 17")))
     (ws-test "Directional Keys 2" num-win win-spl save
       (ws-test-interactive-cmds "C-x o l k j i u")
       (next-line)
@@ -778,8 +780,8 @@ REGEX is a string containing a regular expression to match."
         (save    nil)
         (width-height (lambda (x)
                         (and x
-                             (list (- (third x)  (first x))
-                                   (- (fourth x) (second x)))))))
+                             (list (- (car (nthcdr 2 x)) (car x))
+                                   (- (car (nthcdr 3 x)) (cadr x)))))))
     ;; Each test checks that the windows have changed size
     ;; (either height or width or both) by the correct amount.
     (ws-test "Vertical Resizing 1" num-win win-spl save
@@ -788,36 +790,36 @@ REGEX is a string containing a regular expression to match."
             (use-dialog-box nil))
         (ws-test-interactive-cmds "<C-down> <S-up> <S-up> <S-up> <RET>")
         (setq newsizes (ws-test-window-sizes width-height))
-        (ws-test-should (and (= 3 (- (second (aref newsizes 1)) (second (aref sizes 1))))
-                             (= 3 (- (second (aref sizes 0))    (second (aref newsizes 0))))))))
+        (ws-test-should (and (= 3 (- (cadr (aref newsizes 1)) (cadr (aref sizes 1))))
+                             (= 3 (- (cadr (aref sizes 0))    (cadr (aref newsizes 0))))))))
     (ws-test "Vertical Resizing 2" num-win win-spl save
       (let ((sizes (ws-test-window-sizes width-height))
             (newsizes nil))
         (ws-test-interactive-cmds "<C-down> <right> <S-up> <S-down> <S-up> <S-up> <RET>")
         (setq newsizes (ws-test-window-sizes width-height))
-        (ws-test-should (and (= 2 (- (second (aref newsizes 3)) (second (aref sizes 3))))
-                             (= 2 (- (second (aref sizes 2))    (second (aref newsizes 2))))))))
+        (ws-test-should (and (= 2 (- (cadr (aref newsizes 3)) (cadr (aref sizes 3))))
+                             (= 2 (- (cadr (aref sizes 2))    (cadr (aref newsizes 2))))))))
     (ws-test "Horizontal Resizing 1" num-win win-spl save
       (let ((sizes (ws-test-window-sizes width-height))
             (newsizes nil))
         (ws-test-interactive-cmds "<C-down> <S-left> <S-left> <S-left> <RET>")
         (setq newsizes (ws-test-window-sizes width-height))
-        (ws-test-should (and (= 3 (- (first (aref newsizes 3)) (first (aref sizes 3))))
-                             (= 3 (- (first (aref sizes 1))    (first (aref newsizes 1))))))))
+        (ws-test-should (and (= 3 (- (car (aref newsizes 3)) (car (aref sizes 3))))
+                             (= 3 (- (car (aref sizes 1))    (car (aref newsizes 1))))))))
     (ws-test "Horizontal Resizing 2" num-win win-spl save
       (let ((sizes (ws-test-window-sizes width-height))
             (newsizes nil))
         (ws-test-interactive-cmds "<C-down> <S-right> <S-right> <S-left> <S-left> <S-right> <RET>")
         (setq newsizes (ws-test-window-sizes width-height))
-        (ws-test-should (and (= 1 (- (first (aref newsizes 1)) (first (aref sizes 1))))
-                             (= 1 (- (first (aref sizes 3))    (first (aref newsizes 3))))))))
+        (ws-test-should (and (= 1 (- (car (aref newsizes 1)) (car (aref sizes 1))))
+                             (= 1 (- (car (aref sizes 3))    (car (aref newsizes 3))))))))
     (ws-test "Mixed Resizing 1" num-win win-spl save
       (let ((sizes (ws-test-window-sizes width-height))
             (newsizes nil))
         (ws-test-interactive-cmds "<C-down> <S-right> <S-right> <S-up> <S-up> <S-up> <RET>")
         (setq newsizes (ws-test-window-sizes width-height))
-        (ws-test-should (and (= 3 (- (second (aref newsizes 1)) (second (aref sizes 1))))
-                             (= 2 (- (first (aref newsizes 1)) (first (aref sizes 1))))))))))
+        (ws-test-should (and (= 3 (- (cadr (aref newsizes 1)) (cadr (aref sizes 1))))
+                             (= 2 (- (car (aref newsizes 1)) (car (aref sizes 1))))))))))
 
 (def-ws-test-suite uneven4-ijkl
   "Four windows, ijkl configuration, no other."
@@ -955,7 +957,10 @@ REGEX is a string containing a regular expression to match."
       (kill-buffer (get-buffer-create "*Help*"))
       (let ((result nil)
             (help-window-select 'other) ; Emacs 23+
-            (C-h (key-description (vector help-char))))
+            (C-h (key-description
+                  (vector (if (zerop help-char)
+                              (car help-event-list)
+                            help-char)))))
         (ws-test-interactive-cmds
          (concat "C-x o o o o o o " C-h " l"))
         (ws-test-should (and (get-buffer "*Help*")
@@ -991,12 +996,27 @@ REGEX is a string containing a regular expression to match."
     (ws-test "Adding a key to predefined keylist" num-win win-spl save
       (let ((cur-status (funcall ws-key-status))
             (up-keys (copy-sequence win-switch-up-keys)))
-        (win-switch-add-key (first up-keys) 'other-frame)
-        (win-switch-add-key (first up-keys) 'up)
+        (win-switch-add-key (car up-keys) 'other-frame)
+        (win-switch-add-key (car up-keys) 'up)
         (ws-test-should (equal cur-status
                                (funcall ws-key-status)))))
     ;; ATTN more needed here
     ))
+
+(def-ws-test-suite once4
+  "Using win-switch-dispatch-once, four equal windows, default configuration."
+  (let ((num-win 4)
+        (win-spl '((vert) (horiz horiz)))
+        (save    nil))
+    (ws-test "One at a time dispatch 1" num-win win-spl save
+      (ws-test-interactive-cmds "C-x C-o l C-x C-o k C-x C-o j C-x C-o i")
+      (next-line)
+      (ws-test-should (looking-at "^Line 1")))
+    (ws-test "One at a time dispatch 2" num-win win-spl save
+      (ws-test-interactive-cmds "C-x C-o u C-x C-o u")
+      (next-line)
+      (ws-test-should (looking-at "^Line 1")))))
+
 
 (provide 'ws-tests)
 

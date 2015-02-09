@@ -1,20 +1,20 @@
 ;;; win-switch.el --- fast, dynamic bindings for window-switching/resizing
 
-;; Copyright (C) 2011, 2012 Christopher R. Genovese, all rights reserved.
+;; Copyright (C) 2011-2015 Christopher R. Genovese, all rights reserved.
 
 ;; Author: Christopher Genovese <genovese@cmu.edu>
 ;; Maintainer: Christopher R. Genovese <genovese@cmu.edu>
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/win-switch/
 
-;; Version: 1.0.8
-;; Update#: 19
+;; Version: 1.1.0
+;; Update#: 21
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Sat 02 Feb 2013 at 10:02 EDT
+;; Last-Updated: Sun 08 Feb 2013 at 18:00 EST
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
-;; Compatibility: GNU Emacs 22, GNU Emacs 23, Gnu Emacs 24.0.50
-;;                Tested on these versions on Mac OS X 10.5.
+;; Compatibility: GNU Emacs 22, GNU Emacs 23.4, Gnu Emacs 24.4.1
+;;                Tested on these versions on Mac OS X 10.7.5.
 ;;                Testing or feedback for other platforms/versions
 ;;                would be very much appreciated.
 
@@ -289,7 +289,6 @@
 
 
 (require 'windmove)
-(eval-when-compile (require 'cl)) ; push, pop, dolist
 
 
 ;; (@* "User-Configurable Parameters")
@@ -423,7 +422,7 @@ unset on exit had been set on entry. See the function
 (defvar win-switch-on-hook nil
   "List of functions to be called as window switching mode is entered.
 When these functions are called, the overriding key map will have been
-set up, but before the timer has been started.")
+set up, but the timer will not have been started.")
 
 ;;;###autoload
 (defvar win-switch-off-hook nil
@@ -801,8 +800,7 @@ leave an exit key available")
 
 (defvar win-switch-once-map
   (let ((map (make-sparse-keymap "Window Switching")))
-    (dolist (cmdpair (concatenate 'list
-                                  win-switch-commands win-switch-once-commands))
+    (dolist (cmdpair (append win-switch-commands win-switch-once-commands nil))
       (let ((keysym (car cmdpair))
             (cmd    (cdr cmdpair)))
         (dolist (key (symbol-value keysym))
@@ -869,10 +867,25 @@ If nil, MAYBE-FRAME defaults to the current frame."
           (frame-selected-window frame)))
     (length (window-list frame nil window))))
 
-(defalias 'win-switch-up     'windmove-up)
-(defalias 'win-switch-down   'windmove-down)
-(defalias 'win-switch-left   'windmove-left)
-(defalias 'win-switch-right  'windmove-right)
+(defun win-switch-up (&optional arg)
+  (interactive "P")
+  (ignore-errors
+    (windmove-do-window-select 'up arg)))
+
+(defun win-switch-down (&optional arg)
+  (interactive "P")
+  (ignore-errors
+    (windmove-do-window-select 'down arg)))
+
+(defun win-switch-left (&optional arg)
+  (interactive "P")
+  (ignore-errors
+    (windmove-do-window-select 'left arg)))
+
+(defun win-switch-right (&optional arg)
+  (interactive "P")
+  (ignore-errors
+    (windmove-do-window-select 'right arg)))
 
 (defun win-switch-next-window (arg &optional interactive?)
   "Move to next window in window list.
@@ -894,10 +907,10 @@ when using icicles."
         (funcall win-switch-other-window-function arg))
     (other-window (prefix-numeric-value arg))))
 
-(defun win-switch-previous-window ()
+(defun win-switch-previous-window (arg &optional interactive?)
   "Move to previous window in window list."
-  (interactive)
-  (win-switch-next-window -1))
+  (interactive "p\np")
+  (win-switch-next-window (- arg) interactive?))
 
 (defun win-switch-double-next-window ()
   "Advance two windows in window list."
@@ -1174,7 +1187,7 @@ on of the keys in the alist `win-switch-once-commands'.)"
   (interactive "XList of Key Sequences: \nSSet to win-switch-once command name: ")
   (let* ((name-str (if (stringp name) name (symbol-name name)))
          (name-sym (if (symbolp name) name (intern name)))
-         (cmd-list (concatenate 'list win-switch-commands win-switch-once-commands))
+         (cmd-list (append win-switch-commands win-switch-once-commands nil))
          (cmdpair  (or (assoc name-sym cmd-list)
                        (assoc (intern (format "win-switch-%s-keys" name-str))
                               cmd-list)))
@@ -1277,9 +1290,8 @@ during dispatch."
        (win-switch-dispatch arg))))
 
 ;;;###autoload
-(fset 'win-switch-dispatch-once 'win-switch-once-map)
-(put  'win-switch-dispatch-once 'function-documentation
-      "Prefix command to execute one window-switching operation.
+(defun win-switch-dispatch-once (&optional arg)
+  "Prefix command to execute one window-switching operation.
 This command does not enter window-switching mode, nor does it
 require an exit. Except for the exit commands, which are
 excluded, the commands and keys are shared with
@@ -1288,7 +1300,14 @@ move forward and backward by two windows. See
 `win-shift-once-double-next-keys' and
 `win-shift-once-double-prev-keys' for the associated keys. Taken
 together, these bindings make it convenient to use a single key
-sequence to navigate conveniently with up to five windows.")
+sequence to navigate conveniently with up to five windows."
+  (interactive "P")
+  (let* ((keys (read-key-sequence-vector nil t))
+         (cmd (lookup-key win-switch-once-map keys)))
+    (if cmd
+        (call-interactively cmd)
+      (message "%s is undefined" (key-description (this-command-keys-vector))))))
+
 
 
 ;; (@* "Pre-defined Configurations")
@@ -1438,7 +1457,8 @@ should be a list of keys that will be bound globally to
 
 ;;;###autoload
 (defun win-switch-authors-configuration ()
-  "Win-switch configuration prefered by the package author."
+  "Win-switch configuration previously preferred by the package author."
+  (interactive)
   ;; Perhaps even a little shorter...
   (setq win-switch-idle-time 0.7)
   ;; For two windows, we can always use C-u to force entry
@@ -1447,6 +1467,32 @@ should be a list of keys that will be bound globally to
   ;; confusing -- easier to just move where you want to go.
   ;; But with 3 or fewer windows, it's much more efficient.
   (setq win-switch-other-window-first (lambda () (null (nthcdr 3 (window-list)))))
+  ;; Mode-line visual feedback is a potent cue
+  (setq win-switch-provide-visual-feedback t)
+  (setq win-switch-feedback-background-color "red")
+  (setq win-switch-feedback-foreground-color "white")
+  ;; No special functions, though icicles remaps other-window
+  ;; which gets used here and whose argument is respected
+  (setq win-switch-on-feedback-function nil)
+  (setq win-switch-off-feedback-function nil)
+  (setq win-switch-other-window-function nil)
+  ;; Wrap around makes things easier
+  (win-switch-set-wrap-around 1)
+  ;; These two keys get easily confused when typing quickly
+  ;; so it's easiest to not have to be too precise.
+  ;; I just use both for window switching.
+  (win-switch-setup-keys-ijkl "\C-xo" "\C-x\C-o"))
+
+;;;###autoload
+(defun win-switch-authors-new-configuration ()
+  "Win-switch configuration currently preferred by the package author."
+  (interactive)
+  ;; Perhaps even a little shorter...
+  (setq win-switch-idle-time 0.7)
+  ;; I've gotten used to using it even with two windows
+  (setq win-switch-window-threshold 1)
+  ;; I've gotten used to just moving into the mode and going from there.
+  (setq win-switch-other-window-first nil)
   ;; Mode-line visual feedback is a potent cue
   (setq win-switch-provide-visual-feedback t)
   (setq win-switch-feedback-background-color "red")
