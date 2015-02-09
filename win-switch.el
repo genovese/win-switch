@@ -6,10 +6,10 @@
 ;; Maintainer: Christopher R. Genovese <genovese@cmu.edu>
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/win-switch/
 
-;; Version: 1.1.0
-;; Update#: 21
+;; Version: 1.1.1
+;; Update#: 22
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Sun 08 Feb 2013 at 18:00 EST
+;; Last-Updated: Mon 09 Feb 2015 at 00:10 EST
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
@@ -152,11 +152,12 @@
 ;;  for moving between window; the primary motivation is to allow
 ;;  `icicle-other-window-or-frame' under icicles.
 ;;
-;;  And three hooks can be set as well:
+;;  And four hooks can be set as well:
 ;;
 ;;    + `win-switch-load-hook'
 ;;    + `win-switch-on-hook'
 ;;    + `win-switch-off-hook'
+;;    + `win-switch-abort-hook'
 ;;
 ;;  The following functions are used to set options:
 ;;
@@ -201,6 +202,12 @@
 
 ;;; Change Log:
 ;;
+;;  * 09 Feb 2015 -- Added abort-hook to check for no-entry conditions,
+;;                   cleaned up timer functions and dispatch checks.
+;;                   
+;;  * 08 Feb 2015 -- Minor bug and doc fixes; fixed win-switch-dispatch-once,
+;;                   ignores errors when there are no windows to move to.
+;;                   
 ;;  * 02 Feb 2013 -- Fixed customization type for win-switch-window-threshold
 ;;                   Fixed comment describing L and J keys' functionality
 ;;
@@ -421,12 +428,27 @@ unset on exit had been set on entry. See the function
 ;;;###autoload
 (defvar win-switch-on-hook nil
   "List of functions to be called as window switching mode is entered.
-When these functions are called, the overriding key map will have been
-set up, but the timer will not have been started.")
+These functions are called just before the overriding key map is set up
+and before the timer is started.")
 
 ;;;###autoload
 (defvar win-switch-off-hook nil
-  "List of functions to be called after window switching mode is exited.")
+  "List of functions to be called after window switching mode is exited.
+These functions are called after the timer is cleared and the
+overriding key map is restored")
+
+;;;###autoload
+(defvar win-switch-abort-hook nil
+  "List of functions that check if `win-switch-dispatch' should be aborted.
+These functions are called in succession at `win-switch-dispatch'
+just before entering window-switching mode and after checking the
+usual conditions on the window threshold and prefix arguments. If
+any function in this list returns a non-nil value,
+window-switching mode is not entered. If the returned value is
+'abort, then no action is taken; for any other non-nil value
+`win-switch-next-window' is still called. The primary purpose of
+these hooks is to allow for conditions where the persistent mode
+can cause conflicts or other problems.")
 
 
 ;; (@* "User-Configurable Key Bindings")
@@ -828,23 +850,22 @@ to assign directly to this keymap. See `win-switch-dispatch-once.'")
 
 ;; (@* "Internal Functions and Macros")
 
-(defmacro win-switch-start-timer (timer secs func)
-  "Cancel TIMER, if valid, then run for SECS seconds before executing FUNC.
-TIMER is a symbol; SECS is a number or time; and FUNC is a function,
-usually a quoted symbol. SECS and FUNC are interpreted as in the corresponding
-arguments to `run-with-idle-timer'."
-  `(progn
-     (when (and ,timer (timerp ,timer))
-       (cancel-timer ,timer))
-     (setq ,timer (run-with-idle-timer ,secs nil ,func))))
+(defun win-switch-start-timer (secs func)
+  "Run for SECS seconds before excecuting function FUNC, if SECS is non-nil.
+Uses `win-switch-timer', if valid, canceling it before restarting. 
+If non-nil, SECS should be a number or time; FUNC should be a
+symbol or function."
+  (when secs
+     (when (and win-switch-timer (timerp win-switch-timer))
+       (cancel-timer win-switch-timer))
+     (setq win-switch-timer (run-with-idle-timer secs nil func))))
 
-(defmacro win-switch-clear-timer (timer)
-  "Cancel TIMER, if valid, then null the symbol's value."
-  `(progn
-     (when ,timer
-       (when (timerp ,timer)
-         (cancel-timer ,timer))
-       (setq ,timer nil))))
+(defun win-switch-clear-timer ()
+  "Cancel and nullify `win-switch-timer', if valid."
+  (when win-switch-timer
+    (when (timerp win-switch-timer)
+      (cancel-timer win-switch-timer))
+    (setq win-switch-timer nil)))
 
 (defmacro win-switch-override-map (map)
   "Save keymap bound to symbol MAP and set MAP to `win-switch-map'."
@@ -858,14 +879,13 @@ arguments to `run-with-idle-timer'."
   "Reset symbol MAP's value to most recently saved keymap."
   `(setq ,map (pop win-switch-overriding-map-stack)))
 
-(defun win-switch-number-of-windows (&optional maybe-frame)
-  "The number of windows in frame MAYBE-FRAME.
-If nil, MAYBE-FRAME defaults to the current frame."
-  (let* ((frame
-          (or maybe-frame (selected-frame)))
-         (window
-          (frame-selected-window frame)))
-    (length (window-list frame nil window))))
+(defun win-switch--enough-windows-p (&optional maybe-frame)
+  "Are there enough windows on MAYBE-FRAME to enter window-switching mode?
+Frame defaults to the selected frame if MAYBE-FRAME is nil."
+  (let* ((frame (or maybe-frame (selected-frame))))
+    (or (<= win-switch-window-threshold 0)
+        (nthcdr win-switch-window-threshold (window-list frame)))))
+
 
 (defun win-switch-up (&optional arg)
   (interactive "P")
@@ -954,25 +974,24 @@ when using icicles."
 (defun win-switch-begin-override ()
   "Engage window switching interface."
   (when (not win-switch-engaged)
-    (win-switch-override-map overriding-local-map)
     (condition-case err-val
         (run-hooks 'win-switch-on-hook)
       (error
        (message "win-switch encountered error (%s) in on hook" err-val)))
-    (win-switch-start-timer win-switch-timer win-switch-idle-time
-                            'win-switch-exit-by-timeout)
-    (setq win-switch-engaged t)))
+    (win-switch-override-map overriding-local-map)
+    (setq win-switch-engaged t)
+    (win-switch-start-timer win-switch-idle-time 'win-switch-exit-by-timeout)))
 
 (defun win-switch-end-override ()
   "Disengage window switching interface."
   (when win-switch-engaged
+    (win-switch-clear-timer)
+    (setq win-switch-engaged nil)
     (win-switch-restore-map overriding-local-map)
-    (win-switch-clear-timer win-switch-timer)
     (condition-case err-val
         (run-hooks 'win-switch-off-hook)
       (error
-       (message "win-switch encountered error (%s) in off hook" err-val)))
-    (setq win-switch-engaged nil)))
+       (message "win-switch encountered error (%s) in off hook" err-val)))))
 
 (defun win-switch-enter ()
   "Enter window switching mode with feedback."
@@ -1255,16 +1274,16 @@ switching behavior and how this function interprets its argument.
 While more complicated than ideal, this dichotomy gives maximum
 flexibility for several common use cases."
   (interactive "P")
-  (let ((enter (or (<= win-switch-window-threshold 0)
-                   must-enter-or-prefix
-                   (> (win-switch-number-of-windows) win-switch-window-threshold)))
-        (arg (and (<= win-switch-window-threshold 0)
-                  must-enter-or-prefix)))
-    (when (or (and win-switch-other-window-first
-                   (if (functionp win-switch-other-window-first)
-                       (funcall win-switch-other-window-first)
-                     t))
-              (not enter))
+  (let* ((abort (run-hook-with-args-until-success win-switch-abort-hook))
+         (enter (and (not abort)
+                     (or must-enter-or-prefix (win-switch--enough-windows-p))))
+         (arg (and (<= win-switch-window-threshold 0) must-enter-or-prefix)))
+    (when (and (not (eq abort 'abort))
+               (or (and win-switch-other-window-first
+                        (if (functionp win-switch-other-window-first)
+                            (funcall win-switch-other-window-first)
+                          t))
+                   (not enter)))
       (win-switch-next-window arg))
     (when enter
       (win-switch-enter))))
