@@ -6,10 +6,10 @@
 ;; Maintainer: Christopher R. Genovese <genovese@cmu.edu>
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/win-switch/
 
-;; Version: 1.1.2
-;; Update#: 23
+;; Version: 1.1.3
+;; Update#: 24
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Tue 10 Feb 2015 at 13:53 EST
+;; Last-Updated: Sat 08 Oct 2016 at 20:39 EDT
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
@@ -203,6 +203,14 @@
 
 ;;; Change Log:
 ;;
+;;  * 08 Oct 2016 -- (win-switch-on-feedback, win-switch-off-feedback)
+;;                   Speed up by changing mode-line face only on 
+;;                   selected frame, and only when needed.
+;;
+;;                   (win-switch-exit-by-timeout) Streamlined pushback
+;;                   of exit keys onto unread-command-events, matching
+;;                   change to win-switch-exit-and-redo in last commit.
+;; 
 ;;  * 10 Feb 2015 -- Added '--' to private function names,
 ;;                   streamlined handling of unread-command-events.
 ;;
@@ -966,8 +974,13 @@ when using icicles."
     (setq win-switch-saved-mode-line-faces
           (cons (face-attribute 'mode-line :background)
                 (face-attribute 'mode-line :foreground)))
-    (set-face-background 'mode-line win-switch-feedback-background-color)
-    (set-face-foreground 'mode-line win-switch-feedback-foreground-color)))
+    (let ((this-frame (selected-frame))
+          (background win-switch-feedback-background-color)
+          (foreground win-switch-feedback-foreground-color))
+      (unless (eq background (car win-switch-saved-mode-line-faces))
+        (set-face-background 'mode-line background this-frame))
+      (unless (eq foreground (cdr win-switch-saved-mode-line-faces))
+        (set-face-foreground 'mode-line foreground this-frame)))))
 
 (defun win-switch-off-feedback ()
   "Provide visual feedback for the end of window switching mode."
@@ -975,8 +988,13 @@ when using icicles."
       (funcall win-switch-off-feedback-function)
     (win-switch-off-alert)
     (when win-switch-saved-mode-line-faces
-      (set-face-background 'mode-line (car win-switch-saved-mode-line-faces))
-      (set-face-foreground 'mode-line (cdr win-switch-saved-mode-line-faces)))))
+      (let ((this-frame (selected-frame))
+            (background (car win-switch-saved-mode-line-faces))
+            (foreground (cdr win-switch-saved-mode-line-faces)))
+        (unless (eq background (face-attribute 'mode-line :background))
+          (set-face-background 'mode-line background this-frame))
+        (unless (eq foreground (face-attribute 'mode-line :foreground))
+         (set-face-foreground 'mode-line foreground this-frame))))))
 
 (defun win-switch-begin-override ()
   "Engage window switching interface."
@@ -1023,9 +1041,9 @@ until *after* the next command. This functions issues
 an exit command event."
   (interactive)
   (when win-switch-engaged
-    (mapc (lambda (u) (push u unread-command-events))
-          (reverse (listify-key-sequence
-                    (car win-switch-exit-keys))))))
+    (let ((key (car win-switch-exit-keys)))
+      (setq unread-command-events
+            (append (listify-key-sequence key) unread-command-events)))))
 
 (defun win-switch-emergency-exit ()
   "Exit from window switching mode without niceties."
