@@ -6,10 +6,10 @@
 ;; Maintainer: Christopher R. Genovese <genovese@cmu.edu>
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/win-switch/
 
-;; Version: 1.1.1
-;; Update#: 22
+;; Version: 1.1.2
+;; Update#: 23
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Mon 09 Feb 2015 at 00:10 EST
+;; Last-Updated: Tue 10 Feb 2015 at 13:53 EST
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
@@ -194,13 +194,17 @@
 ;;   3. (@> "Preventing Default Shadowing")
 ;;   4. (@> "Internal Configuration Data")
 ;;   5. (@> "Internal Functions and Macros")
-;;   6. (@> "Customization Initializers and Option Setters")
-;;   7. (@> "User Entry Points")
-;;   8. (@> "Pre-defined Configurations")
+;;   6. (@> "Actions and Key Commands")
+;;   7. (@> "Customization Initializers and Option Setters")
+;;   8. (@> "User Entry Points")
+;;   9. (@> "Pre-defined Configurations")
 ;;
 
 
 ;;; Change Log:
+;;
+;;  * 10 Feb 2015 -- Added '--' to private function names,
+;;                   streamlined handling of unread-command-events.
 ;;
 ;;  * 09 Feb 2015 -- Added abort-hook to check for no-entry conditions,
 ;;                   cleaned up timer functions and dispatch checks.
@@ -219,7 +223,7 @@
 ;;                   in win-switch-setup-keys-arrows. The former was causing
 ;;                   load failure from package.el.
 ;;
-;;  * 17 Jan 2012 -- Removed linkd minor mode nad Package-Requires header
+;;  * 17 Jan 2012 -- Removed linkd minor mode and Package-Requires header
 ;;                   because they were causing problems with loading
 ;;                   the package through package.el.
 ;;
@@ -733,8 +737,8 @@ where <key-list> is a list of key bindings."
 
 ;; (@* "Preventing Default Shadowing")
 
-;; Because of a bug (or what I think should be considered a bug) in
-;; Emacs, adding sparse prefix key map can shadow the default binding
+;; Because of an issue (which I think should be considered a bug) in
+;; Emacs, adding a sparse prefix key map can shadow the default binding
 ;; for unbound keys with the same prefix. For instance, if the user adds
 ;; a binding to a key involving the Meta modifier when no such binding
 ;; was included before, a sub-keymap is created under meta-prefix-char
@@ -743,12 +747,12 @@ where <key-list> is a list of key bindings."
 ;; sequence. This can cause problems because window-switching mode will
 ;; not be exited automatically in this case as it should.
 ;;
-;; The function `win-switch-fix-keymap-defaults' adds the necessary
+;; The function `win-switch--fix-keymap-defaults' adds the necessary
 ;; defaults in the keymap and sub-keymaps. It is used in the key setting
 ;; functions and in the `win-switch-map' keymap definition itself.
 ;; 
 
-(defun win-switch-fix-keymap-defaults (map)
+(defun win-switch--fix-keymap-defaults (map)
   "Adjust keymap MAP to include proper exit defaults.
 Returns a modified version of MAP that may share some structure
 with the original. In the modified map itself and in any
@@ -763,7 +767,8 @@ keys with the same prefix."
                    (if (and (consp entry)
                             (keymapp (cdr entry))
                             (null (lookup-key (cdr entry) [t])))
-                       (cons (car entry) (win-switch-fix-keymap-defaults (cdr entry)))
+                       (cons (car entry)
+                             (win-switch--fix-keymap-defaults (cdr entry)))
                      entry)) map)))
     (unless (lookup-key fixed-map [t])
       (define-key fixed-map [t] 'win-switch-exit-and-redo))
@@ -810,7 +815,7 @@ See `win-switch-dispatch-once'.")
     ;; see comment above regarding the need for the `esc' submap
     (define-key map [t] 'win-switch-exit-and-redo)
     ;; fix up the defaults
-    (win-switch-fix-keymap-defaults map))
+    (win-switch--fix-keymap-defaults map))
   "Keymap that is active during window switching mode.
 The functions `win-switch-set-keys', `win-switch-add-key', and
 `win-switch-delete-key', can be used to set parts of this keymap
@@ -850,7 +855,7 @@ to assign directly to this keymap. See `win-switch-dispatch-once.'")
 
 ;; (@* "Internal Functions and Macros")
 
-(defun win-switch-start-timer (secs func)
+(defun win-switch--start-timer (secs func)
   "Run for SECS seconds before excecuting function FUNC, if SECS is non-nil.
 Uses `win-switch-timer', if valid, canceling it before restarting. 
 If non-nil, SECS should be a number or time; FUNC should be a
@@ -860,14 +865,14 @@ symbol or function."
        (cancel-timer win-switch-timer))
      (setq win-switch-timer (run-with-idle-timer secs nil func))))
 
-(defun win-switch-clear-timer ()
+(defun win-switch--clear-timer ()
   "Cancel and nullify `win-switch-timer', if valid."
   (when win-switch-timer
     (when (timerp win-switch-timer)
       (cancel-timer win-switch-timer))
     (setq win-switch-timer nil)))
 
-(defmacro win-switch-override-map (map)
+(defmacro win-switch--override-map (map)
   "Save keymap bound to symbol MAP and set MAP to `win-switch-map'."
   `(progn
      (when (and ,map
@@ -875,7 +880,7 @@ symbol or function."
        (push ,map win-switch-overriding-map-stack))
      (setq ,map win-switch-map)))
 
-(defmacro win-switch-restore-map (map)
+(defmacro win-switch--restore-map (map)
   "Reset symbol MAP's value to most recently saved keymap."
   `(setq ,map (pop win-switch-overriding-map-stack)))
 
@@ -886,6 +891,8 @@ Frame defaults to the selected frame if MAYBE-FRAME is nil."
     (or (<= win-switch-window-threshold 0)
         (nthcdr win-switch-window-threshold (window-list frame)))))
 
+
+;; (@* "Actions and Key Commands")
 
 (defun win-switch-up (&optional arg)
   (interactive "P")
@@ -978,16 +985,16 @@ when using icicles."
         (run-hooks 'win-switch-on-hook)
       (error
        (message "win-switch encountered error (%s) in on hook" err-val)))
-    (win-switch-override-map overriding-local-map)
+    (win-switch--override-map overriding-local-map)
     (setq win-switch-engaged t)
-    (win-switch-start-timer win-switch-idle-time 'win-switch-exit-by-timeout)))
+    (win-switch--start-timer win-switch-idle-time 'win-switch-exit-by-timeout)))
 
 (defun win-switch-end-override ()
   "Disengage window switching interface."
   (when win-switch-engaged
-    (win-switch-clear-timer)
+    (win-switch--clear-timer)
     (setq win-switch-engaged nil)
-    (win-switch-restore-map overriding-local-map)
+    (win-switch--restore-map overriding-local-map)
     (condition-case err-val
         (run-hooks 'win-switch-off-hook)
       (error
@@ -1032,8 +1039,8 @@ an exit command event."
   (interactive)
   (let ((my-keys (this-command-keys-vector)))
     (win-switch-exit)
-    (mapc (lambda (u) (push u unread-command-events))
-          (reverse (listify-key-sequence my-keys)))))
+    (setq unread-command-events
+          (append (listify-key-sequence my-keys) unread-command-events))))
 
 
 ;; (@* "Customization Initializers and Option Setters")
@@ -1092,7 +1099,7 @@ An error is raised when trying to empty the exit list."
     (set key-sym key-list)
     (dolist (newkey key-list)
       (define-key win-switch-map newkey cmd)))
-  (setq win-switch-map (win-switch-fix-keymap-defaults win-switch-map))
+  (setq win-switch-map (win-switch--fix-keymap-defaults win-switch-map))
   key-list)
 
 (defun win-switch-name-to-command-sym (name)
@@ -1145,7 +1152,7 @@ NAME should be a symbol or string for which the variable
       (define-key win-switch-map key cmd)
       (win-switch-clear-from-keylists (list key))
       (set sym (cons key lst))))
-  (setq win-switch-map (win-switch-fix-keymap-defaults win-switch-map)))
+  (setq win-switch-map (win-switch--fix-keymap-defaults win-switch-map)))
 
 ;;;###autoload
 (defun win-switch-delete-key (key name)
@@ -1169,7 +1176,7 @@ message."
         (message "Removing last key from command list win-switch-%s-keys" name)))
     (define-key win-switch-map key 'win-switch-exit-and-redo)
     (set sym (delete key lst))
-    (setq win-switch-map (win-switch-fix-keymap-defaults win-switch-map))))
+    (setq win-switch-map (win-switch--fix-keymap-defaults win-switch-map))))
 
 ;;;###autoload
 (defun win-switch-define-key (key def &optional force-no-default)
@@ -1188,7 +1195,7 @@ non-nil."
   (win-switch-clear-from-keylists (list key))
   (define-key win-switch-map key def)
   (unless force-no-default
-    (setq win-switch-map (win-switch-fix-keymap-defaults win-switch-map))))
+    (setq win-switch-map (win-switch--fix-keymap-defaults win-switch-map))))
 
 ;; Ideally, setting the once keys would be integrated into key setting
 ;; interface for the regular commands. But this would add nontrivial
@@ -1528,8 +1535,8 @@ should be a list of keys that will be bound globally to
   ;; I just use both for window switching.
   (win-switch-setup-keys-ijkl "\C-xo" "\C-x\C-o"))
 
-(run-hooks 'win-switch-load-hook)
 
+(run-hooks 'win-switch-load-hook)
 (provide 'win-switch)
 
 ;; Local Variables:
