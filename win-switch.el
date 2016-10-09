@@ -6,10 +6,10 @@
 ;; Maintainer: Christopher R. Genovese <genovese@cmu.edu>
 ;; URL: http://www.stat.cmu.edu/~genovese/emacs/win-switch/
 
-;; Version: 1.1.3
-;; Update#: 24
+;; Version: 1.1.4
+;; Update#: 25
 ;; Created:      Wed 28 Jul 2011 at 00:27 EDT
-;; Last-Updated: Sat 08 Oct 2016 at 20:39 EDT
+;; Last-Updated: Sun 09 Oct 2016 at 12:20 EDT
 ;; By: Christopher R. Genovese
 
 ;; Keywords: window, switch, key bindings, ergonomic, efficient
@@ -796,7 +796,7 @@ keys with the same prefix."
     (win-switch-shrink-vertically-keys    . shrink-window)
     (win-switch-shrink-horizontally-keys  . shrink-window-horizontally)
     (win-switch-enlarge-horizontally-keys . enlarge-window-horizontally)
-    (win-switch-other-frame-keys          . other-frame)
+    (win-switch-other-frame-keys          . win-switch-other-frame)
     (win-switch-exit-keys                 . win-switch-exit)
     (win-switch-split-vertically-keys     . split-window-vertically)
     (win-switch-split-horizontally-keys   . split-window-horizontally)
@@ -859,6 +859,9 @@ to assign directly to this keymap. See `win-switch-dispatch-once.'")
 
 (defvar win-switch-saved-mode-line-faces nil
   "Holds cons with previous mode-line background and foreground.")
+
+(defvar win-switch-visited-frames-list nil
+  "Holds list of frames visited during a single window-switching interval.")
 
 
 ;; (@* "Internal Functions and Macros")
@@ -957,6 +960,20 @@ when using icicles."
   (interactive)
   (win-switch-next-window -2))
 
+;; ATTN: This must be cleaned up. See comment below at win-switch-on-feedback
+(defun win-switch-other-frame (&optional arg)
+  "Select the ARGth different visible frame on current display, and raise it.
+
+Like `other-frame' but correctly cleans up visual feedback settings."
+  (interactive "p")
+  (when (and win-switch-provide-visual-feedback
+             (not win-switch-off-feedback-function))
+    (win-switch-off-feedback-mode-line))
+  (other-frame arg)
+  (when (and win-switch-provide-visual-feedback
+             (not win-switch-on-feedback-function))
+    (win-switch-on-feedback-mode-line)))
+
 (defun win-switch-on-alert ()
   "Alert users, usually in echo area, that window switching is on."
   (message "Window Switching Mode On..."))
@@ -966,6 +983,33 @@ when using icicles."
   (message "Window Switching Mode Off.")
   (run-with-timer 0.5 nil (lambda () (message nil))))
 
+;; ATTN: Issue -- CRG 2016-10-09
+;; The change to the mode-line feedback in each frame as of v1.1.3
+;; gave noticeably improved responsiveness. In fact, with many frames,
+;; changing the mode-line face in all frames at the beginning of window
+;; switching was noticeably and annoyingly lagged.
+;;
+;; However, setting the background in each frame makes the coordination
+;; difficult, as we don't want to leave any frames with the mode-line
+;; changed after win-switching exits. In particular, setting it in each
+;; frame required that we replace `other-frame' by
+;; `win-switch-other-frame', which handls the mode-line changes if
+;; required when a new frame is visited. This is leaky and not DRY, and
+;; it requires decoupling the mode-line feedback change from the state
+;; changs on beginning and end. It is clear now that the feedback
+;; function should be a parameter with a default setting and pre- and
+;; post- hooks rather than the way it is done here. Some care needs
+;; to go into how that is arranged so that the main feedback functions
+;; can be called at each frame change.
+;; For example, *-(start|end)-feedback-functions can be those
+;; called only at the beginning and end of a window-switching interval
+;; whereas *-continuing-(on|off)-feedback-functions at a frame change, and
+;; *-(pre|post)-cleanup-feedback-functions wrapped around the whole
+;; thing for state cleanup.  That is messy and confusing, though.
+;; Maybe asthetically better to have an alist for the feedback functions
+;; which is used to set the messier variables  (pre-cleanup functions...)
+;; (start functions...)  (continuing functions...), et cetera.
+
 (defun win-switch-on-feedback ()
   "Provide visual feedback for the start of window switching mode."
   (if win-switch-on-feedback-function
@@ -974,27 +1018,46 @@ when using icicles."
     (setq win-switch-saved-mode-line-faces
           (cons (face-attribute 'mode-line :background)
                 (face-attribute 'mode-line :foreground)))
-    (let ((this-frame (selected-frame))
+    (win-switch-on-feedback-mode-line)))
+
+(defun win-switch-on-feedback-mode-line ()
+  "Provide feedback via mode-line colors for start of window switching mode.
+
+This function only changes the mode-line foreground and background
+in the *current frame*, and only if they are different from the 
+saved colors in `win-switch-saved-mode-line-faces', which should be
+set on entry into window-switching mode."
+  (let ((this-frame (selected-frame))
           (background win-switch-feedback-background-color)
           (foreground win-switch-feedback-foreground-color))
       (unless (eq background (car win-switch-saved-mode-line-faces))
         (set-face-background 'mode-line background this-frame))
       (unless (eq foreground (cdr win-switch-saved-mode-line-faces))
-        (set-face-foreground 'mode-line foreground this-frame)))))
+        (set-face-foreground 'mode-line foreground this-frame))))
 
 (defun win-switch-off-feedback ()
   "Provide visual feedback for the end of window switching mode."
   (if win-switch-off-feedback-function
       (funcall win-switch-off-feedback-function)
     (win-switch-off-alert)
-    (when win-switch-saved-mode-line-faces
-      (let ((this-frame (selected-frame))
-            (background (car win-switch-saved-mode-line-faces))
-            (foreground (cdr win-switch-saved-mode-line-faces)))
-        (unless (eq background (face-attribute 'mode-line :background))
-          (set-face-background 'mode-line background this-frame))
-        (unless (eq foreground (face-attribute 'mode-line :foreground))
-         (set-face-foreground 'mode-line foreground this-frame))))))
+    (win-switch-off-feedback-mode-line)
+    (setq win-switch-saved-mode-line-faces nil)))
+
+(defun win-switch-off-feedback-mode-line ()
+  "Provide feedback via mode-line colors for end of window switching mode.
+
+This function only changes the mode-line foreground and
+background in the *current frame*, and only if
+`win-switch-saved-mode-line-faces' is non-nil and contains
+different colors than the current settings."
+  (when win-switch-saved-mode-line-faces
+    (let ((this-frame (selected-frame))
+          (background (car win-switch-saved-mode-line-faces))
+          (foreground (cdr win-switch-saved-mode-line-faces)))
+      (unless (eq background (face-attribute 'mode-line :background))
+        (set-face-background 'mode-line background this-frame))
+      (unless (eq foreground (face-attribute 'mode-line :foreground))
+        (set-face-foreground 'mode-line foreground this-frame)))))
 
 (defun win-switch-begin-override ()
   "Engage window switching interface."
@@ -1096,7 +1159,7 @@ KEY-SYM is a symbol that must be represented in the alist
 to KEY-LIST, which should be a list of keybindings, and each key
 in the list will be bound to the corresponding commands.
 An error is raised when trying to empty the exit list."
-  (let ((cmd (cdr (assoc key-sym win-switch-commands))))
+  (let ((cmd (cdr (assq key-sym win-switch-commands))))
     (unless cmd
       (error "Symbol %s is not a valid win-switch key list" key-sym))
     (when (and (null key-list) (eq key-sym 'win-switch-exit-keys))
