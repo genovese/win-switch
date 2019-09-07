@@ -1468,6 +1468,34 @@ should be a list of keys that will be bound globally to
   (win-switch-remove-split-and-delete-keys))
 
 ;;;###autoload
+(defun win-switch-setup-keys-ijkl-dvorak (&rest dispatch-keys)
+  "Restore default key commands and bind global dispatch keys.
+Under this setup, keyboard keys i, j, k, and l (c, h, t, and n in
+Dvorak) will switch windows, respectively, up, left, down, and
+right, with other functionality bound to nearby keys. The arguments
+DISPATCH-KEYS, if non-nil, should be a list of keys that will be
+bound globally to `win-switch-dispatch'."
+  (interactive)
+  (win-switch-set-keys '("c") 'up)
+  (win-switch-set-keys '("t") 'down)
+  (win-switch-set-keys '("h") 'left)
+  (win-switch-set-keys '("n") 'right)
+  (win-switch-set-keys '("r") 'next-window)
+  (win-switch-set-keys '("l") 'previous-window)
+  (win-switch-set-keys '("C") 'enlarge-vertically)
+  (win-switch-set-keys '("T") 'shrink-vertically)
+  (win-switch-set-keys '("H") 'shrink-horizontally)
+  (win-switch-set-keys '("N") 'enlarge-horizontally)
+  (win-switch-set-keys '(" ") 'other-frame)
+  (win-switch-set-keys '("g" [return]) 'exit)
+  (win-switch-set-keys '("s") 'split-horizontally)
+  (win-switch-set-keys '("d") 'split-vertically) ; visual not letter mnemonic
+  (win-switch-set-keys '("0") 'delete-window)
+  (win-switch-set-keys '("\M-\C-g") 'emergency-exit)
+  (dolist (key dispatch-keys)
+    (global-set-key key 'win-switch-dispatch)))
+
+;;;###autoload
 (defalias 'win-switch-setup-keys-default 'win-switch-setup-keys-ijkl)
 
 ;;;###autoload
